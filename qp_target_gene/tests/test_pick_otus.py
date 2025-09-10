@@ -126,7 +126,7 @@ class PickOTUsTests(PluginTestCase):
         self._clean_up_files.append(out_dir)
 
         obs_success, obs_ainfo, obs_msg = pick_closed_reference_otus(
-            self.qclient, job_id, self.parameters, out_dir)  # fails with tinqiita
+            self.qclient, job_id, self.parameters, out_dir)  # fails with tinqiita.
         self.assertEqual(obs_msg, "")
         self.assertTrue(obs_success)
         path_builder = partial(join, out_dir, 'cr_otus')
