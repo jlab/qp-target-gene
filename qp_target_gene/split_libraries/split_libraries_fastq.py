@@ -246,6 +246,10 @@ def split_libraries_fastq(qclient, job_id, parameters, out_dir):
     filepaths, mapping_file, atype = get_artifact_information(
         qclient, artifact_id, out_dir)
 
+    # transfer all files from qiita main to here
+    filepaths = {k: [qclient.fetch_file_from_central(file) for file in files]
+                 for k, files in filepaths.items()}
+
     # Step 2 generate the split libraries fastq command
     qclient.update_job_step(job_id, "Step 2 of 4: Generating command")
     command, sl_out = generate_split_libraries_fastq_cmd(
@@ -254,6 +258,7 @@ def split_libraries_fastq(qclient, job_id, parameters, out_dir):
     # Step 3 execute split libraries
     qclient.update_job_step(
         job_id, "Step 3 of 4: Executing demultiplexing and quality control")
+
     std_out, std_err, return_value = system_call(command)
     if return_value != 0:
         raise RuntimeError(
@@ -264,6 +269,6 @@ def split_libraries_fastq(qclient, job_id, parameters, out_dir):
     qclient.update_job_step(job_id, "Step 4 of 4: Generating demux file")
     generate_demux_file(sl_out)
 
-    artifacts_info = generate_artifact_info(sl_out)
+    artifacts_info = generate_artifact_info(qclient, sl_out)
 
     return True, artifacts_info, ""

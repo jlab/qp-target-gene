@@ -7,8 +7,8 @@
 # -----------------------------------------------------------------------------
 
 from unittest import main
-from os.path import isdir, exists, join
-from os import remove, close, mkdir
+from os.path import isdir, exists, join, basename, dirname
+from os import remove, close, mkdir, makedirs
 from shutil import rmtree
 from tempfile import mkstemp, mkdtemp
 from json import dumps
@@ -65,7 +65,7 @@ class PickOTUsTests(PluginTestCase):
                      'preprocessed_demux': ['/directory/seqs.demux']}
 
         obs, obs_dir = generate_pick_closed_reference_otus_cmd(
-            filepaths, output_dir, self.parameters, True)
+            self.qclient, filepaths, output_dir, self.parameters, True)
         exp = ("pick_closed_reference_otus.py -i /directory/seqs.fna "
                "-r /databases/gg/13_8/rep_set/97_otus.fasta -o {0}/cr_otus "
                "-p {0}/cr_params.txt -t "
@@ -85,11 +85,14 @@ class PickOTUsTests(PluginTestCase):
         outdir = mkdtemp()
         self._clean_up_files.append(outdir)
         log_fp = join(outdir, "log_20151204223007.txt")
-        with open(log_fp, 'w') as f:
-            f.write("\n")
-        self._clean_up_files.append(log_fp)
+        for file in [basename(log_fp), "otu_table.biom",
+                     "sortmerna_picked_otus", "sortmerna_picked_otus.tgz"]:
+            file_fp = join(outdir, file)
+            with open(file_fp, 'w') as f:
+                f.write("empty file for testing\n")
+            self._clean_up_files.append(file_fp)
 
-        obs = generate_artifact_info(outdir)
+        obs = generate_artifact_info(self.qclient, outdir)
         fps = [(join(outdir, "otu_table.biom"), "biom"),
                (join(outdir, "sortmerna_picked_otus"), "directory"),
                (join(outdir, "sortmerna_picked_otus.tgz"), "tgz"),
@@ -112,14 +115,19 @@ class PickOTUsTests(PluginTestCase):
         fasta_fp = fps['preprocessed_fasta'][0]['filepath']
         self.parameters['reference-seq'] = '/tmp/seq.fna'
         self.parameters['reference-tax'] = '/tmp/tax.txt'
+        if not exists(dirname(fasta_fp)):
+            makedirs(dirname(fasta_fp))
         with open(fasta_fp, 'w') as f:
             f.write(READS)
+        self.qclient.push_file_to_central(fasta_fp)
         # self._clean_up_files.append(fasta_fp)
         with open(self.parameters['reference-seq'], 'w') as f:
             f.write(REF_SEQ)
+        self.qclient.push_file_to_central(self.parameters['reference-seq'])
         # self._clean_up_files.append(self.parameters['reference-seq'])
         with open(self.parameters['reference-tax'], 'w') as f:
             f.write(REF_TAX)
+        self.qclient.push_file_to_central(self.parameters['reference-tax'])
         # self._clean_up_files.append(self.parameters['reference-tax'])
 
         out_dir = mkdtemp()
